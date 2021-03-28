@@ -6,7 +6,8 @@
 
 
 ## Лістинг програми
-```from random import *
+```python
+from random import *
 from scipy import linalg
 from scipy.stats import t as critT
 from scipy.stats import f as critF
