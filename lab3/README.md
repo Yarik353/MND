@@ -1,4 +1,4 @@
-# Лабораторна робота №2
+# Лабораторна робота №3
 **Виконав:** Мусійчук Я. С. <br>
 **Група:** ІВ-91 <br>
 **Номер у списку:** 19 <br>
@@ -7,141 +7,162 @@
 
 ## Лістинг програми
 ```python
-from random import randint
+from random import *
+from scipy import linalg
+from scipy.stats import t as critT
+from scipy.stats import f as critF
 from math import sqrt
-from numpy.linalg import det
 import prettytable
+###----------Проміжки--------
+x1 = [15, 45]
+x2 = [-35, 15]
+x3 = [-35, -5]
+listX = [x1, x2, x3]
 
-romanovsky_table = {(2, 3, 4): 1.71, (5, 6, 7): 2.1, (8, 9): 2.27, (10, 11): 2.41,
-                    (12, 13): 2.52, (14, 15, 16, 17): 2.64, (18, 19, 20): 2.78}
+m, N, d = 3, 4, 4
+###----------Матриця планування експерименту--------
+planMatrix = [[1, -1, -1, -1],
+          [1, -1, 1, 1],
+          [1, 1, -1, 1],
+          [1, 1, 1, -1]]
 
+###----------Відповідна матриця Х-------
+Xmatrix = [[listX[0][0], listX[1][0], listX[2][0]],
+      [listX[0][0], listX[1][1], listX[2][1]],
+      [listX[0][1], listX[1][0], listX[2][1]],
+      [listX[0][1], listX[1][1], listX[2][0]]]
 
+###----------Транспоновані матриці--------
+transposePlanMatrix = [list(i) for i in zip(*planMatrix)]
+transposeXmatrix = [list(i) for i in zip(*Xmatrix)]
 
-#---------Дані за варіантом-------
-n = 119
-x1_min = 15
-x1_max = 45
-x2_min = -35
-x2_max = 15
-y_max = (30 - n) * 10
-y_min = (20 - n) * 10
+###----------Середні занчення--------
+minMaxAvgX = [sum(listX[i][k] for i in range(3)) / 3 for k in range(2)]
+minMaxY = [int(200 + minMaxAvgX[i]) for i in range(2)]
 
-#---------Шукані величини-------
-offset = 0
-romanovsky = 0
-averages_y = list()
-dispersion_y = list()
-f_uv = list()
-sigma_uv = list()
-r_uv = list()
+###----------Матрицця Y--------
+Ymatrix = [[randint(minMaxY[0], minMaxY[1]) for _ in range(m)] for _ in range(N)]
 
-x1 = [-1, -1, 1]
-x2 = [-1, 1, -1]
+def AvgY():
+    return [sum(Ymatrix[k1]) / m for k1 in range(N)]
 
-nx1 = [x1_min if x1[i] == -1 else x1_max for i in range(3)]
-nx2 = [x2_min if x2[i] == -1 else x2_max for i in range(3)]
+def find_cf():
+    tran = transposeXmatrix
+    mx = [sum(Xmatrix[i][k] for i in range(N)) / N for k in range(m)]
+    my = sum(AvgY()) / N
+    ai = [sum(transposeXmatrix[k][i] * AvgY()[i] for i in range(N)) / N for k in range(m)]
+    aii = [sum(transposeXmatrix[k][i] ** 2 for i in range(N)) / N for k in range(m)]
 
-m = 5
-y_1 = [randint(y_min, y_max) for i in range(m)]
-y_2 = [randint(y_min, y_max) for i in range(m)]
-y_3 = [randint(y_min, y_max) for i in range(m)]
+    a12 = a21 = (tran[0][0] * tran[1][0] + tran[0][1] * tran[1][1] + tran[0][2] * tran[1][2] + tran[0][3] * tran[1][
+        3]) / N
+    a13 = a31 = (tran[0][0] * tran[2][0] + tran[0][1] * tran[2][1] + tran[0][2] * tran[2][2] + tran[0][3] * tran[2][
+        3]) / N
+    a23 = a32 = (tran[1][0] * tran[2][0] + tran[1][1] * tran[2][1] + tran[1][2] * tran[2][2] + tran[1][3] * tran[2][
+        3]) / N
 
-def get_dispersion(average, y_list):
-    dispersion = 0
-    for i in range(len(y_list)):
-        dispersion += (y_list[i]-average)**2
-    return dispersion/m
+    determnt = linalg.det(
+        [[1, mx[0], mx[1], mx[2]],
+         [mx[0], aii[0], a12, a13],
+         [mx[1], a12, aii[1], a32],
+         [mx[2], a13, a23, aii[2]]])
 
+    b0 = linalg.det([[my, mx[0], mx[1], mx[2]],
+                     [ai[0], aii[0], a12, a13],
+                     [ai[1], a12, aii[1], a32],
+                     [ai[2], a13, a23, aii[2]]]) / determnt
 
-def romanovsky_criterion():
-    global offset, romanovsky, averages_y, dispersion_y, f_uv, sigma_uv, r_uv, m
-    averages_y = [sum(y_1)/m, sum(y_2)/m, sum(y_3)/m]
-    dispersion_y = [get_dispersion(averages_y[0], y_1), get_dispersion(averages_y[1], y_2), get_dispersion(averages_y[2], y_3)]
-    offset = sqrt((2*(2*m-2))/(m*(m-4)))
-    uv_pairs = [[dispersion_y[0], dispersion_y[1]], [dispersion_y[1], dispersion_y[2]], [dispersion_y[2], dispersion_y[0]]]
-    for i in range(3):
-        f_uv.append(max(uv_pairs[i]) / min(uv_pairs[i]))
-    sigma_uv = [((m-2)/m)*f_uv[0], ((m-2)/m)*f_uv[1], ((m-2)/m)*f_uv[2]]
-    r_uv = [abs(sigma_uv[0]-1)/offset, abs(sigma_uv[1]-1)/offset, abs(sigma_uv[2]-1)/offset]
-    for key in romanovsky_table.keys():
-        if m in key:
-            romanovsky = romanovsky_table[key]
-            break
+    b1 = linalg.det([[1, my, mx[1], mx[2]],
+                     [mx[0], ai[0], a12, a13],
+                     [mx[1], ai[1], aii[1], a32],
+                     [mx[2], ai[2], a23, aii[2]]]) / determnt
 
+    b2 = linalg.det([[1, mx[0], my, mx[2]],
+                     [mx[0], aii[0], ai[0], a13],
+                     [mx[1], a12, ai[1], a32],
+                     [mx[2], a13, ai[2], aii[2]]]) / determnt
 
-    if(max(r_uv)>=romanovsky):
-        m+=1
-        y_1.append(randint(y_min, y_max))
-        y_2.append(randint(y_min, y_max))
-        y_3.append(randint(y_min, y_max))
-        romanovsky_criterion()
+    b3 = linalg.det([[1, mx[0], mx[1], my],
+                     [mx[0], aii[0], a12, ai[0]],
+                     [mx[1], a12, aii[1], ai[1]],
+                     [mx[2], a13, a23, ai[2]]]) / determnt
 
-romanovsky_criterion()
-#-------------Розрахунок нормованих коефіцієнтів рівняння регресії
+    check = [b0 + b1 * tran[0][i] + b2 * tran[1][i] + b3 * tran[2][i] for i in range(4)]
+    b_list = [b0, b1, b2, b3]
+    return check, b_list
 
-mx1, mx2, my = sum(x1) / 3, sum(x2) / 3, sum(averages_y) / 3
-a1, a2, a3 = (x1[0]**2 + x1[1]**2+ x1[2]**2)/3,  (x1[0]*x2[0] + x1[1]*x2[1] + x1[2]*x2[2])/3, (x2[0]**2 + x2[1]**2+ x2[2]**2)/3
-a11, a22 = (x1[0]*averages_y[0] + x1[1]*averages_y[1] + x1[2]*averages_y[2])/3,  (x2[0]*averages_y[0] + x2[1]*averages_y[1] + x2[2]*averages_y[2])/3
+f1 = m-1
+f2 = N
+f3 = f1*f2
+f4 = N - d
 
-deter = det([[1, mx1, mx2], [mx1, a1, a2], [mx2, a2, a3]])
-b0 = det([[my, mx1, mx2], [a11, a1, a2], [a22, a2, a3]]) / deter
-b1 = det([[1, my, mx2], [mx1, a11, a2], [mx2, a22, a3]]) / deter
-b2 = det([[1, mx1, my], [mx1, a1, a11], [mx2, a2, a22]]) / deter
-
-delta_x1, delta_x2, x10, x20 = abs(x1_max - x1_min) / 2, abs(x2_max - x2_min) / 2, (x1_max + x1_min) / 2, (x2_max + x2_min) / 2
-a0 =((b0 - b1 * x10 / delta_x1) - (b2 * x20 / delta_x2))
-a1 = (b1 / delta_x1)
-a2 = (b2 / delta_x2)
+Ydisperssion = [sum([((k1 - AvgY()[j]) ** 2) for k1 in Ymatrix[j]]) / m for j in range(N)]
+check, b_list = find_cf()
+print('Матриця планування:')
 
 table = prettytable.PrettyTable()
-table.field_names = ["№", "X1", "X2", *[f"Y{i+1}" for i in range(m)]]
-
-table.add_row([1, x1[0], x2[0], *y_1])
-table.add_row([2, x1[1], x2[1], *y_2])
-table.add_row([3, x1[2], x2[2], *y_3])
-
-print("Критерій Романовського: " + str(romanovsky))
-print("Головне відхилення: " + str(offset))
+table.field_names = ["X1", "X2", "X3", "Y1", "Y2", "Y3"]
+for i in range(0, 4):
+    table.add_row([*[x for x in Xmatrix[i]], *[y for y in Ymatrix[i]]])
 print(table)
+print(f"\nРівняння регресії:\ny = {b_list[0]} + {b_list[1]}*x1 + {b_list[2]}*x2 + {b_list[3]}*x3")
 
-table2 = prettytable.PrettyTable()
-table2.field_names = ["№", "Average Y", "Dispersion Y", "Fuv", "σuv", "Ruv"]
-for i in range(3):
-    table2.add_row([i+1, round(averages_y[i], 3), round(dispersion_y[i], 3), round(f_uv[i], 3), round(sigma_uv[i], 3), round(r_uv[i], 3)])
+print('\nПеревірка однорідності дисперсії за критерієм Кохрена:')
 
-print(table2)
+if max(Ydisperssion) / sum(Ydisperssion) < 0.7679:
+    print('Дисперсія однорідна: ', max(Ydisperssion) / sum(Ydisperssion))
+else:
+    print('Дисперсія неоднорідна: ', max(Ydisperssion) / sum(Ydisperssion))
 
-print(f"Нормоване рівняння регресії: {round(b0, 3)} + {round(b1, 3)} * x1 + {round(b2, 3)} * x2")
+print('\nПеревірка нуль-гіпотези за критерієм Стьюдента:')
 
-table3 = prettytable.PrettyTable()
-table3.field_names = ["№", "X1", "X2", "Experimental Y", "Average Y"]
-for i in range(3):
-    table3.add_row([i+1, x1[i], x2[i], round(averages_y[i], 3), round(b0+b1*x1[i]+b2*x2[i], 3)])
-print(table3)
+S2b = sum(Ydisperssion) / N
+S2bs = S2b / (m * N)
+Sbs = sqrt(S2bs)
+bb = [sum(AvgY()[k] * transposePlanMatrix[i][k] for k in range(N)) / N for i in range(N)]
+t = [round((abs(bb[i]) / Sbs),3) for i in range(N)]
+table1 = prettytable.PrettyTable()
+table1.field_names = ["t0", "t1", "t2", "t3"]
+table1.add_row([*t])
+print(table1)
+for i in range(N):
+    if t[i] < critT.ppf(q=0.975, df=f3):
+        b_list[i] = 0
+        d -= 1
 
-print(f"Натуралізоване рівняння регресії: {round(a0, 3)} + {round(a1, 3)} * x1 + {round(a2, 3)} * x2")
+y_reg = [b_list[0] + b_list[1] * Xmatrix[i][0] + b_list[2] * Xmatrix[i][1] + b_list[3] * Xmatrix[i][2]
+         for i in range(N)]
+print('Значення у:')
+[print(
+    f"{b_list[0]} + {b_list[1]}*x1 + {b_list[2]}*x2 + {b_list[3]}*x3 = {b_list[0] + b_list[1] * Xmatrix[i][0] + b_list[2] * Xmatrix[i][1] + b_list[3] * Xmatrix[i][2]}")
+    for i in range(N)]
 
-table4 = prettytable.PrettyTable()
-table4.field_names = ["№", "NX1", "NX2", "Experimental Y", "Average Y"]
-for i in range(3):
-    table4.add_row([i+1, nx1[i], nx2[i], round(averages_y[i], 3), round(a0+a1*nx1[i]+a2*nx2[i], 3)])
-print(table4)
+print('\nПеревірка адекватності моделі за критерієм Фішера:')
+Sad = (m / (N - d)) * int(sum(y_reg[i] - AvgY()[i] for i in range(N)) ** 2)
+Fp = Sad / S2b
+q = 0.05
+F_table = critF.ppf(q=1-q, dfn=f4, dfd=f3)
+print('Fp  =', Fp)
+if Fp > F_table:
+    print('Неадекватно при 0.05')
+else:
+    print('Адекватно при 0.05')
 
 ```
 
 ## Відповіді на контрольні запитання
 
-1.	Що таке регресійні поліноми і де вони застосовуються?
-В теорії планування експерименту найважливішою частиною є оцінка результатів вимірів. При цьому використовують апроксимуючі поліноми, за допомогою яких ми можемо описати нашу функцію. В ТПЕ ці поліноми отримали спеціальну назву - регресійні поліноми, а їх знаходження та аналіз - регресійний аналіз.
+1.Що називається дробовим факторним експериментом?
+Дробовим факторним експериментом називається експеримент з використанням частини повного факторного експерименту
 
-2.	Визначення однорідності дисперсії.
-Обирають так названу «довірчу ймовірність» p – ймовірність, з якою вимагається підтвердити гіпотезу про однорідність дисперсій. У відповідності до p і кількості дослідів m обирають з таблиці критичне значення критерію . Кожне  експериментальне значення Ruv критерію Романовського порівнюється з Rкр. (значення критерію Романовського за різних довірчих ймовірностей p) і якщо для усіх   кожне Ruv < Rкр., то гіпотеза про однорідність дисперсій підтверджується з ймовірністю p.
+2.Для чого потрібно розрахункове значення Кохрена?
+Розрахункове значення Кохрена використовують для перевірки однорідності дисперсій.
 
-3.	Що називається повним факторним експериментом?
-Для знаходження коефіцієнтів у лінійному рівнянні регресії застосовують повний факторний експеримент (ПФЕ). Якщо в багатофакторному експерименті використані всі можливі комбінації рівнів факторів, то такий експеримент називається повним факторним експериментом 
+3. Для чого перевіряється критерій Стьюдента?
+За допомогою критерію Стьюдента перевіряється значущість коефіцієнтів рівняння
 
-
+4.Чим визначається критерій Фішера і як його застосовувати?
+Критерій Фішера використовують при перевірці отриманого рівняння регресії досліджуваного об”єкта.
 
 ## Результат виконання роботи
 
-![Результат](https://github.com/Yarik353/MND/blob/main/lab2/result.png)
+![Результат](https://github.com/Yarik353/MND/blob/main/lab3/result.png)
