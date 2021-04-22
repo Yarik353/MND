@@ -4,6 +4,7 @@ from scipy.stats import t as critT
 from scipy.stats import f as critF
 from math import sqrt
 import prettytable
+import time
 ###----------Проміжки--------
 x1 = [15, 45]
 x2 = [-35, 15]
@@ -110,11 +111,18 @@ S2b = sum(Ydisperssion) / N
 S2bs = S2b / (m * N)
 Sbs = sqrt(S2bs)
 bb = [sum(AvgY()[k] * transposePlanMatrix[i][k] for k in range(N)) / N for i in range(N)]
+
+before_time = time.clock()
 t = [round((abs(bb[i]) / Sbs),3) for i in range(N)]
+after_time = time.clock()
+final_time = after_time - before_time
+
 table1 = prettytable.PrettyTable()
 table1.field_names = ["t0", "t1", "t2", "t3"]
 table1.add_row([*t])
 print(table1)
+print("Час виконання пошуку значимих коефіціентів: " + str(final_time))
+
 for i in range(N):
     if t[i] < critT.ppf(q=0.975, df=f3):
         b_list[i] = 0
@@ -137,3 +145,5 @@ if Fp > F_table:
     print('Неадекватно при 0.05')
 else:
     print('Адекватно при 0.05')
+
+print("Час виконання пошуку значимих коефіцієнтів: " + str(final_time))
