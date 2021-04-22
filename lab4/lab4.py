@@ -144,7 +144,8 @@ if cohren():
     Fp = Dispersion_ad / Dispersion_beta
     Ft = fisher()
     print("Критерій Фіішера")
-    if Ft > Fp:
+    
+    if (Ft > Fp) and list(beta_list).count(0) < len(list(beta_list))-list(beta_list).count(0) : # Додаткова перевірка, якщо кількість незначимих менша за кількість значимих - то модель вважається неадекватною
         print("Рівняння регресії адекватне!")
     else:
         print("Рівняння регресії неадекватне.")
