@@ -140,6 +140,7 @@ def fisher_kr(y, y_aver, y_new, n, m, d):
     return S_ad / skv_aver
 
 def check(x, y, b, n, m):
+    global minor_quantity
     print('\nПеревірка рівняння:')
     f1 = m - 1
     f2 = n
@@ -164,6 +165,7 @@ def check(x, y, b, n, m):
     print('\nКритерій Стьюдента:\n{}:'.format(ts))
     res = [t for t in ts if t > t_student]
     final_k = [b[i] for i in range(len(ts)) if ts[i] in res]
+    minor_quantity += len([i for i in b if i not in final_k])
     print('\nКоефіціенти {} статично незначущі, тому ми виключаємо їх з рівняння.'.format([round(i, 3) for i in b if i not in final_k]))
     y_new = []
     for j in range(n):
@@ -199,4 +201,7 @@ x_aver_min = sum([x[0] for x in x_range]) / 3
 y_min = 200 + int(x_aver_min)
 y_max = 200 + int(x_aver_max)
 
-main(15, 3)
+minor_quantity = 0
+for i in range(100):
+    main(15, 3)
+print("Середня кількість незначимих коефіціентів на одну ітерацію: " + str(minor_quantity/100))
